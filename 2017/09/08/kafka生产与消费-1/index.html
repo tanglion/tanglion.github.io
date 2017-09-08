@@ -95,17 +95,17 @@
 
 
 
-<meta name="description" content="python: 嗅探网卡HTTP流量并存储到Kafka 转自：路哥1、读取网卡http数据，插入kafka from pykafka import KafkaClient from scapy.all import * import time import logging  logging.getLogger(&amp;quot;pykafka&amp;quot;).addHandler(logging.Stre">
+<meta name="description" content="TYRANT team from JD">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Tanglion&#39;s Blog">
+<meta property="og:title" content="kafka生产与消费">
 <meta property="og:url" content="http://yoursite.com/2017/09/08/kafka生产与消费-1/index.html">
 <meta property="og:site_name" content="Tanglion&#39;s Blog">
-<meta property="og:description" content="python: 嗅探网卡HTTP流量并存储到Kafka 转自：路哥1、读取网卡http数据，插入kafka from pykafka import KafkaClient from scapy.all import * import time import logging  logging.getLogger(&amp;quot;pykafka&amp;quot;).addHandler(logging.Stre">
+<meta property="og:description" content="TYRANT team from JD">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2017-09-08T09:51:16.744Z">
+<meta property="og:updated_time" content="2017-09-08T09:59:21.514Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Tanglion&#39;s Blog">
-<meta name="twitter:description" content="python: 嗅探网卡HTTP流量并存储到Kafka 转自：路哥1、读取网卡http数据，插入kafka from pykafka import KafkaClient from scapy.all import * import time import logging  logging.getLogger(&amp;quot;pykafka&amp;quot;).addHandler(logging.Stre">
+<meta name="twitter:title" content="kafka生产与消费">
+<meta name="twitter:description" content="TYRANT team from JD">
 
 
 
@@ -141,7 +141,7 @@
 
 
 
-  <title> | Tanglion's Blog</title>
+  <title>kafka生产与消费 | Tanglion's Blog</title>
   
 
 
@@ -255,7 +255,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline"></h1>
+          <h1 class="post-title" itemprop="name headline">kafka生产与消费</h1>
         
 
         <div class="post-meta">
@@ -305,48 +305,7 @@
       
 
       
-        <h2 id="python-嗅探网卡HTTP流量并存储到Kafka-转自：路哥"><a href="#python-嗅探网卡HTTP流量并存储到Kafka-转自：路哥" class="headerlink" title="python: 嗅探网卡HTTP流量并存储到Kafka 转自：路哥"></a>python: 嗅探网卡HTTP流量并存储到Kafka <strong>转自：路哥</strong></h2><p>1、读取网卡http数据，插入kafka</p>
-<pre><code>from pykafka import KafkaClient
-from scapy.all import *
-import time
-import logging
-
-logging.getLogger(&quot;pykafka&quot;).addHandler(logging.StreamHandler())
-logging.getLogger(&quot;pykafka&quot;).setLevel(logging.DEBUG)
-
-client = KafkaClient(hosts =&quot;172.20.222.96:9092,172.20.222.97:9092&quot;)
-topic = client.topics[&apos;request_message&apos;]
-producers = topic.get_sync_producer()
-
-def callback(dpkt):
-    for p in dpkt:
-        for f in p.payload.payload.payload.fields_desc:
-            fvalue = p.payload.payload.getfieldval(f.name)
-            reprval = f.i2repr(p.payload.payload, fvalue)
-            # 需求只要GET请求
-            if &apos;HTTP&apos; in reprval and &apos;GET&apos; in reprval:
-                reprval = reprval[1:]
-                request_text = reprval[:-1]
-                producers.produce(str(request_text))
-
-if __name__==&quot;__main__&quot;:
-    sniff(iface = &quot;enp2s0f1&quot;, filter=&quot;tcp port 80 or tcp port 443&quot;, prn=callback)
-</code></pre><p>2、顺便附上kafka消费代码</p>
-<pre><code>from pykafka import KafkaClient
-from scapy.all import *
-import time
-import logging
-
-logging.getLogger(&quot;pykafka&quot;).addHandler(logging.StreamHandler())
-logging.getLogger(&quot;pykafka&quot;).setLevel(logging.DEBUG)
-
-client = KafkaClient(hosts =&quot;172.20.222.96:9092,172.20.222.97:9092&quot;)
-topic = client.topics[&apos;request_message&apos;]
-if __name__==&quot;__main__&quot;:  
-    consumer = topic.get_simple_consumer(consumer_timeout_ms=2000, auto_commit_enable=1) 
-    for message in consumer:
-        print message.value
-</code></pre>
+        
       
     </div>
     
@@ -379,6 +338,10 @@ if __name__==&quot;__main__&quot;:
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/09/08/kafka生产与消费/" rel="prev" title="">
+                 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -430,17 +393,8 @@ if __name__==&quot;__main__&quot;:
       
 
       
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview">
-            站点概览
-          </li>
-        </ul>
-      
 
-      <section class="site-overview sidebar-panel">
+      <section class="site-overview sidebar-panel sidebar-panel-active">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           
             <img class="site-author-image" itemprop="image"
@@ -458,7 +412,7 @@ if __name__==&quot;__main__&quot;:
             
               <a href="/archives">
             
-                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-count">4</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -537,22 +491,6 @@ if __name__==&quot;__main__&quot;:
 
       </section>
 
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#python-嗅探网卡HTTP流量并存储到Kafka-转自：路哥"><span class="nav-number">1.</span> <span class="nav-text">python: 嗅探网卡HTTP流量并存储到Kafka 转自：路哥</span></a></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
       
 
       
