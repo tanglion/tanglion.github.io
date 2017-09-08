@@ -103,7 +103,7 @@
 <meta property="og:site_name" content="Tanglion&#39;s Blog">
 <meta property="og:description" content="1、golang 读取kafka 如下库 import &amp;quot;github.com/Shopify/sarama&amp;quot;  但此库不支持balanced 读取模式 package saramaimport “github.com/Shopify/sarama” Package sarama is a pure Go client library for dealing with Apac">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2017-09-08T11:08:34.410Z">
+<meta property="og:updated_time" content="2017-09-08T11:14:37.211Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="golang读取kafka">
 <meta name="twitter:description" content="1、golang 读取kafka 如下库 import &amp;quot;github.com/Shopify/sarama&amp;quot;  但此库不支持balanced 读取模式 package saramaimport “github.com/Shopify/sarama” Package sarama is a pure Go client library for dealing with Apac">
@@ -313,7 +313,98 @@
 <p>Package sarama is a pure Go client library for dealing with Apache Kafka (versions 0.8 and later). It includes a high-level API for easily producing and consuming messages, and a low-level API for controlling bytes on the wire when the high-level API is insufficient. Usage examples for the high-level APIs are provided inline with their full documentation.</p>
 <p>To produce messages, use either the AsyncProducer or the SyncProducer. The AsyncProducer accepts messages on a channel and produces them asynchronously in the background as efficiently as possible; it is preferred in most cases. The SyncProducer provides a method which will block until Kafka acknowledges the message as produced. This can be useful but comes with two caveats: it will generally be less efficient, and the actual durability guarantees depend on the configured value of <code>Producer.RequiredAcks</code>. There are configurations where a message acknowledged by the SyncProducer can still sometimes be lost.</p>
 <p>To consume messages, use the Consumer. Note that Sarama’s Consumer implementation does not currently support automatic consumer-group rebalancing and offset tracking. <strong>For Zookeeper-based tracking (Kafka 0.8.2 and earlier), the <a href="https://github.com/wvanbergen/kafka" target="_blank" rel="external">https://github.com/wvanbergen/kafka</a> library</strong> builds on Sarama to add this support. For Kafka-based tracking (Kafka 0.9 and later), the <a href="https://github.com/bsm/sarama-cluster" target="_blank" rel="external">https://github.com/bsm/sarama-cluster</a> library builds on Sarama to add this support.</p>
-<p>2、若要使用balance读取模式</p>
+<pre><code>package main
+
+import (
+    &quot;flag&quot;
+    &quot;log&quot;
+    &quot;os&quot;
+    &quot;os/signal&quot;
+    &quot;strings&quot;
+    &quot;time&quot;
+
+    &quot;github.com/Shopify/sarama&quot;
+    &quot;github.com/wvanbergen/kafka/consumergroup&quot;
+    &quot;github.com/wvanbergen/kazoo-go&quot;
+)
+
+const (
+    DefaultKafkaTopics   = &quot;test_topic&quot;
+    DefaultConsumerGroup = &quot;consumer_example.go&quot;
+)
+
+var (
+    consumerGroup  = flag.String(&quot;group&quot;, DefaultConsumerGroup, &quot;The name of the consumer group, used for coordination and load balancing&quot;)
+    kafkaTopicsCSV = flag.String(&quot;topics&quot;, DefaultKafkaTopics, &quot;The comma-separated list of topics to consume&quot;)
+    zookeeper      = flag.String(&quot;zookeeper&quot;, &quot;&quot;, &quot;A comma-separated Zookeeper connection string (e.g. `zookeeper1.local:2181,zookeeper2.local:2181,zookeeper3.local:2181`)&quot;)
+
+    zookeeperNodes []string
+)
+
+func init() {
+    sarama.Logger = log.New(os.Stdout, &quot;[Sarama] &quot;, log.LstdFlags)
+}
+
+func main() {
+    flag.Parse()
+
+    if *zookeeper == &quot;&quot; {
+        flag.PrintDefaults()
+        os.Exit(1)
+    }
+
+    config := consumergroup.NewConfig()
+    config.Offsets.Initial = sarama.OffsetNewest
+    config.Offsets.ProcessingTimeout = 10 * time.Second
+
+    zookeeperNodes, config.Zookeeper.Chroot = kazoo.ParseConnectionString(*zookeeper)
+
+    kafkaTopics := strings.Split(*kafkaTopicsCSV, &quot;,&quot;)
+
+    consumer, consumerErr := consumergroup.JoinConsumerGroup(*consumerGroup, kafkaTopics, zookeeperNodes, config)
+    if consumerErr != nil {
+        log.Fatalln(consumerErr)
+    }
+
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    go func() {
+        &lt;-c
+        if err := consumer.Close(); err != nil {
+            sarama.Logger.Println(&quot;Error closing the consumer&quot;, err)
+        }
+    }()
+
+    go func() {
+        for err := range consumer.Errors() {
+            log.Println(err)
+        }
+    }()
+
+    eventCount := 0
+    offsets := make(map[string]map[int32]int64)
+
+    for message := range consumer.Messages() {
+        if offsets[message.Topic] == nil {
+            offsets[message.Topic] = make(map[int32]int64)
+        }
+
+        eventCount += 1
+        if offsets[message.Topic][message.Partition] != 0 &amp;&amp; offsets[message.Topic][message.Partition] != message.Offset-1 {
+            log.Printf(&quot;Unexpected offset on %s:%d. Expected %d, found %d, diff %d.\n&quot;, message.Topic, message.Partition, offsets[message.Topic][message.Partition]+1, message.Offset, message.Offset-offsets[message.Topic][message.Partition]+1)
+        }
+
+        // Simulate processing time
+        time.Sleep(10 * time.Millisecond)
+
+        offsets[message.Topic][message.Partition] = message.Offset
+        consumer.CommitUpto(message)
+    }
+
+    log.Printf(&quot;Processed %d events.&quot;, eventCount)
+    log.Printf(&quot;%+v&quot;, offsets)
+}
+</code></pre><p>2、若要使用balance读取模式</p>
 <pre><code>import &quot;github.com/wvanbergen/kafka&quot;
 </code></pre><p>关于simple_consumer 和 balanced_consumer 的区别详见前文</p>
 
