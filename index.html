@@ -238,6 +238,135 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/08/golang读取kafka/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tanglion">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="http://ovwm4u54f.bkt.clouddn.com/touxiang.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tanglion's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/09/08/golang读取kafka/" itemprop="url">golang读取kafka</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-09-08T19:02:10+08:00">
+                2017-09-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>1、golang 读取kafka 如下库</p>
+<pre><code>import &quot;github.com/Shopify/sarama&quot;
+</code></pre><p> 但此库不支持balanced 读取模式</p>
+<p>package sarama<br>import “github.com/Shopify/sarama”</p>
+<p>Package sarama is a pure Go client library for dealing with Apache Kafka (versions 0.8 and later). It includes a high-level API for easily producing and consuming messages, and a low-level API for controlling bytes on the wire when the high-level API is insufficient. Usage examples for the high-level APIs are provided inline with their full documentation.</p>
+<p>To produce messages, use either the AsyncProducer or the SyncProducer. The AsyncProducer accepts messages on a channel and produces them asynchronously in the background as efficiently as possible; it is preferred in most cases. The SyncProducer provides a method which will block until Kafka acknowledges the message as produced. This can be useful but comes with two caveats: it will generally be less efficient, and the actual durability guarantees depend on the configured value of <code>Producer.RequiredAcks</code>. There are configurations where a message acknowledged by the SyncProducer can still sometimes be lost.</p>
+<p>To consume messages, use the Consumer. Note that Sarama’s Consumer implementation does not currently support automatic consumer-group rebalancing and offset tracking. <strong>For Zookeeper-based tracking (Kafka 0.8.2 and earlier), the <a href="https://github.com/wvanbergen/kafka" target="_blank" rel="external">https://github.com/wvanbergen/kafka</a> library</strong> builds on Sarama to add this support. For Kafka-based tracking (Kafka 0.9 and later), the <a href="https://github.com/bsm/sarama-cluster" target="_blank" rel="external">https://github.com/bsm/sarama-cluster</a> library builds on Sarama to add this support.</p>
+<p>2、若要使用balance读取模式</p>
+<pre><code>import &quot;github.com/wvanbergen/kafka&quot;
+</code></pre><p>关于simple_consumer 和 balanced_consumer 的区别详见前文</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/08/python操作kafka/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -349,7 +478,10 @@ if __name__==&quot;__main__&quot;:
     consumer = topic.get_balanced_consumer(consumer_group=&apos;net_url&apos;,auto_commit_enable=True) 
     for message in consumer:
         print message.value
-</code></pre>
+</code></pre><p>3、 关于 simple_consumer和balanced_consumer的区别：</p>
+<p>   simple_consumer：简单读取模式，不记录offset值，每次执行都是从消息队列的起始位置读取</p>
+<p>   balanced_consumer：参数group 表示读取者所属组，每次读取后会记录当前读取位置，下次读取时从该位置读取，这样保证了，多个同组的读取者，每次读取的数据不重复</p>
+
           
         
       
@@ -433,7 +565,7 @@ if __name__==&quot;__main__&quot;:
             
               <a href="/archives">
             
-                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-count">2</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -446,7 +578,7 @@ if __name__==&quot;__main__&quot;:
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">1</span>
+                <span class="site-state-item-count">2</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
