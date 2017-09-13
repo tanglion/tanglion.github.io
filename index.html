@@ -238,6 +238,343 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/13/Restart/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tanglion">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="http://ovwm4u54f.bkt.clouddn.com/touxiang.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tanglion's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/09/13/Restart/" itemprop="url">Restart</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-09-13T21:02:31+08:00">
+                2017-09-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>话不多说，直接上代码</p>
+<p>1、版本检查和进程自身重启间的调度采用 signal chan</p>
+<pre><code>package main
+
+import (
+    &quot;GoRadar/core&quot;
+    &quot;GoRadar/lib&quot;
+    &quot;fmt&quot;
+    &quot;os/exec&quot;
+    &quot;github.com/benmanns/goworker&quot;
+    &quot;os&quot;
+    &quot;path/filepath&quot;
+    &quot;github.com/levigross/grequests&quot;
+    &quot;log&quot;
+    &quot;runtime&quot;
+    &quot;net/http&quot;
+    &quot;io&quot;
+    &quot;time&quot;
+)
+
+// 扫描
+func ScanActivityTask(queue string, args ...interface{}) error {
+    fmt.Println(&quot;调用队列:&quot; + queue)
+    ip_range := args[0].(string)
+    is_limit_scan_rate := args[1].(bool)
+    sa := core.NewScanActivity()
+    sa.Scanner(ip_range,is_limit_scan_rate)
+    return nil
+}
+func ScanPortTask(queue string, args ...interface{}) error {
+    fmt.Println(&quot;调用队列:&quot; + queue)
+    ip_range := args[0].(string)
+    scan_mode := args[1].(string)
+    is_limit_scan_rate := args[2].(bool)
+    sa := core.NewScanPort()
+    sa.Scan(ip_range,scan_mode,is_limit_scan_rate)
+    return nil
+}
+
+var (
+    version = &quot;1.0.1&quot;
+    download_url = &quot;&quot;
+)
+
+func Version_validate(c chan string) (bool){
+    resp, err := grequests.Get(&quot;http://43.226.164.114/version.txt&quot;, nil)
+    // You can modify the request by passing an optional RequestOptions struct
+    if err != nil {
+        fmt.Println(&quot;Validate version error: Unable to make request &quot;)
+        return false
+    }else {
+        new_version := resp.String()[0:5]
+        fmt.Println(&quot;new_version:&quot;+ new_version)
+        fmt.Println(&quot;version:&quot;+ version)
+        if version &lt; new_version {
+            os_name := runtime.GOOS
+            if os_name == &quot;linux&quot; {
+                download_url = &quot;http://43.226.164.114/linux/&quot; + new_version
+            } else if os_name == &quot;windows&quot; {
+                download_url = &quot;http://43.226.164.114/windows/&quot; + new_version
+            }
+            download,_ := Download_new_agent(download_url,os_name)
+            if download == true {
+                c &lt;- &quot;new&quot;
+                fmt.Println(&quot;New agent version found !&quot;)
+                return true
+            }else{
+                c &lt;- &quot;old&quot;
+                return false
+            }
+        }else{
+            return false
+        }
+    }
+}
+
+func Download_new_agent(url string,os_name string) (bool,error){
+    res, err := http.Get(url)
+    if err != nil {
+        return false,err
+    }
+    var file_name string
+    if os_name == &quot;windows&quot;{
+        file_name = &quot;Agent.exe&quot;
+    }else if os_name == &quot;linux&quot;{
+        file_name = &quot;Agent&quot;
+    }else{
+        file_name = &quot;Agent&quot;
+    }
+    cmd := exec.Command(&quot;rm&quot;,&quot;-rf&quot;,file_name)
+    cmd.Run()
+    f, err := os.Create(file_name)
+    if err != nil {
+        return false,err
+    }
+    _, er := io.Copy(f, res.Body)
+    if er != nil {
+        return false,er
+    }
+    if os_name == &quot;linux&quot;{
+        cmdd := exec.Command(&quot;chmod&quot;,&quot;+x&quot;,file_name)
+        cmdd.Run()
+    }
+    res.Body.Close()
+    f.Close()
+    return true,er
+
+}
+
+func Restart_process(){
+    filePath, _ := filepath.Abs(os.Args[0])
+    cmd := exec.Command(filePath)
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+    err := cmd.Start()
+    if err != nil {
+        log.Fatalf(&quot;GracefulRestart: Failed to launch, error: %v&quot;, err)
+    }
+
+}
+
+
+func init() {
+
+    cfg := lib.NewConfigUtil(&quot;&quot;)
+    redis_host, _ := cfg.GetString(&quot;redis_default&quot;, &quot;host&quot;)
+    redis_port, _ := cfg.GetString(&quot;redis_default&quot;, &quot;port&quot;)
+    redis_pass, _ := cfg.GetString(&quot;redis_default&quot;, &quot;pass&quot;)
+    redis_db, _ := cfg.GetString(&quot;redis_default&quot;, &quot;db&quot;)
+    var dsn_addr string
+    if redis_pass != &quot;&quot; {
+        dsn_addr = fmt.Sprintf(&quot;redis://:%s@%s:%s/%s&quot;, redis_pass, redis_host, redis_port, redis_db)
+    } else {
+        dsn_addr = fmt.Sprintf(&quot;redis://%s:%s/%s&quot;, redis_host, redis_port, redis_db)
+    }
+
+    settings := goworker.WorkerSettings{
+        URI:            dsn_addr,
+        Connections:    100,
+        Queues:         []string{&quot;ScanActivityQueue&quot;,&quot;ScanPortQuene&quot;},
+        UseNumber:      true,
+        ExitOnComplete: false,
+        Concurrency:    50,
+        Namespace:      &quot;goradar:&quot;,
+        Interval:       5.0,
+    }
+
+    goworker.SetSettings(settings)
+    //read scan option
+    activeswitch, _ := cfg.GetString(&quot;agent_default&quot;,&quot;scanactivity&quot;)
+    portswitch, _ := cfg.GetString(&quot;agent_default&quot;,&quot;scanport&quot;)
+    if activeswitch == &quot;yes&quot; {
+        goworker.Register(&quot;ScanActivityTask&quot;, ScanActivityTask)
+        fmt.Println(&quot;Start active scan !&quot;)
+    }else if activeswitch == &quot;no&quot;{
+        fmt.Println(&quot;Doesn&apos;t start active scan !&quot;)
+    }else{
+        fmt.Println(&quot;Error: config anget-&gt;scanactivity param error, only &apos;yes&apos; or &apos;no&apos; allowed&quot;)
+    }
+    if portswitch == &quot;yes&quot; {
+        goworker.Register(&quot;ScanPortTask&quot;, ScanPortTask)
+        fmt.Println(&quot;Start ports scan !&quot;)
+    }else if portswitch == &quot;no&quot;{
+        fmt.Println(&quot;Doesn&apos;t start ports scan !&quot;)
+    }else{
+        fmt.Println(&quot;Error: Config anget-&gt;scanport param error,only &apos;yes&apos; or &apos;no&apos; allowed&quot;)
+    }
+}
+
+func main() {
+
+    // 加入守护进程机制
+
+    if os.Getppid() != 1 {
+        //判断当其是否是子进程，当父进程return之后，子进程会被 系统1 号进程接管
+        filePath, _ := filepath.Abs(os.Args[0])
+        //将命令行参数中执行文件路径转换成可用路径
+        cmd := exec.Command(filePath)
+        //将其他命令传入生成出的进程
+        cmd.Stdin = os.Stdin
+        //给新进程设置文件描述符，可以重定向到文件中
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+        //开始执行新进程，不等待新进程退出
+        cmd.Start()
+        return
+    }
+
+
+    signals := make(chan string)
+    go func(){
+        for{
+            Version_validate(signals)
+            time.Sleep(10 * time.Minute)
+        }
+    }()
+
+    go func() {
+        for{
+            if err := goworker.Work(); err != nil {
+                fmt.Println(&quot;Error:&quot;, err)
+            }
+        }
+    }()
+
+    for{
+        select {
+        case signal := &lt;-signals:
+            if signal == &quot;new&quot; {
+                Restart_process()
+                return
+            }
+        case &lt;-time.After(time.Second * 10):
+            fmt.Println(&quot;timeout, check again...&quot;)
+            continue
+        }
+    }
+}
+</code></pre>
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/08/golang读取kafka/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -656,7 +993,7 @@ if __name__==&quot;__main__&quot;:
             
               <a href="/archives">
             
-                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-count">3</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
