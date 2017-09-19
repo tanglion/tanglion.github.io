@@ -102,7 +102,7 @@
 <meta property="og:site_name" content="Tanglion&#39;s Blog">
 <meta property="og:description" content="话不多说，直接上代码 1、版本检查和进程自身重启间的调度采用 signal chan package main  import (     &amp;quot;GoRadar/core&amp;quot;     &amp;quot;GoRadar/lib&amp;quot;     &amp;quot;fmt&amp;quot;     &amp;quot;os/exec&amp;quot;     &amp;quot;github.com/benmanns/gow">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2017-09-13T13:06:24.576Z">
+<meta property="og:updated_time" content="2017-09-19T09:28:36.889Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Restart">
 <meta name="twitter:description" content="话不多说，直接上代码 1、版本检查和进程自身重启间的调度采用 signal chan package main  import (     &amp;quot;GoRadar/core&amp;quot;     &amp;quot;GoRadar/lib&amp;quot;     &amp;quot;fmt&amp;quot;     &amp;quot;os/exec&amp;quot;     &amp;quot;github.com/benmanns/gow">
@@ -350,7 +350,7 @@ var (
 )
 
 func Version_validate(c chan string) (bool){
-    resp, err := grequests.Get(&quot;http://43.226.164.114/version.txt&quot;, nil)
+    resp, err := grequests.Get(&quot;http://192.168.0.7/version.txt&quot;, nil)
     // You can modify the request by passing an optional RequestOptions struct
     if err != nil {
         fmt.Println(&quot;Validate version error: Unable to make request &quot;)
@@ -362,9 +362,9 @@ func Version_validate(c chan string) (bool){
         if version &lt; new_version {
             os_name := runtime.GOOS
             if os_name == &quot;linux&quot; {
-                download_url = &quot;http://43.226.164.114/linux/&quot; + new_version
+                download_url = &quot;http://192.168.0.7/linux/&quot; + new_version
             } else if os_name == &quot;windows&quot; {
-                download_url = &quot;http://43.226.164.114/windows/&quot; + new_version
+                download_url = &quot;http://192.168.0.7/windows/&quot; + new_version
             }
             download,_ := Download_new_agent(download_url,os_name)
             if download == true {

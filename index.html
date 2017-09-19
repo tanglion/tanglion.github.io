@@ -521,7 +521,7 @@ var (
 )
 
 func Version_validate(c chan string) (bool){
-    resp, err := grequests.Get(&quot;http://43.226.164.114/version.txt&quot;, nil)
+    resp, err := grequests.Get(&quot;http://192.168.0.7/version.txt&quot;, nil)
     // You can modify the request by passing an optional RequestOptions struct
     if err != nil {
         fmt.Println(&quot;Validate version error: Unable to make request &quot;)
@@ -533,9 +533,9 @@ func Version_validate(c chan string) (bool){
         if version &lt; new_version {
             os_name := runtime.GOOS
             if os_name == &quot;linux&quot; {
-                download_url = &quot;http://43.226.164.114/linux/&quot; + new_version
+                download_url = &quot;http://192.168.0.7/linux/&quot; + new_version
             } else if os_name == &quot;windows&quot; {
-                download_url = &quot;http://43.226.164.114/windows/&quot; + new_version
+                download_url = &quot;http://192.168.0.7/windows/&quot; + new_version
             }
             download,_ := Download_new_agent(download_url,os_name)
             if download == true {
