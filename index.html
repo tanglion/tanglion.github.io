@@ -238,6 +238,173 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/19/centos安装-更新nmap/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tanglion">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="http://ovwm4u54f.bkt.clouddn.com/touxiang.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tanglion's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/09/19/centos安装-更新nmap/" itemprop="url">centos安装/更新nmap</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-09-19T17:16:28+08:00">
+                2017-09-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>1、安装脚本</p>
+<pre><code>#!/usr/bin/env bash
+# Upgrade nmap
+
+# Check if user is root
+if [ $(id -u) != &quot;0&quot; ]; then
+    echo &quot;Error: You must be root to run this script&quot;
+    exit 1
+fi
+
+cur_dir=$(pwd)
+Nmap_Install()
+{
+    wget -c https://nmap.org/dist/nmap-7.60.tar.bz2
+    if [ -f &quot;./nmap-7.40.tar.bz2&quot; ]; then
+        bzip2 -cd nmap-7.40.tar.bz2 | tar xvf -
+        cd nmap-7.40
+        ./configure
+        make &amp;&amp; make install
+    fi
+}
+nmap --version
+if [ $? == 0 ]; then
+
+    version = `nmap --version` | awk &apos;{print $3}&apos;
+    if [ $version == &quot;7.60&quot; ]; then
+       echo &quot;Current nmap version is 7.40&quot;
+       exit 1
+    else
+       yum -y remove nmap
+       if [ $? == 0 ]; then
+           Nmap_Install
+       fi
+    fi
+else
+    Nmap_Install
+fi
+</code></pre><p>2、安装nmap 过程中可能会出错 g++: command not found<br>  原因：G++没有装或却没有更新<br>  运行如下命令：</p>
+<pre><code>centos： 
+yum -y update gcc 
+yum -y install gcc+ gcc-c++
+
+ubuntu： 
+apt-get update gcc 
+apt-get install g++
+</code></pre><p>3、运行nmap 出现如下错误<br>  nmap: error while loading shared libraries: libssl.so.1.1: cannot open shared object file: No such file or directory<br>  这是由于openssl库的位置不正确造成的。<br>  解决方法：<br>  在root用户下执行：</p>
+<pre><code>ln -s /usr/local/lib64/libssl.so.1.1 /usr/lib64/libssl.so.1.1
+ln -s /usr/local/lib64/libcrypto.so.1.1 /usr/lib64/libcrypto.so.1.1
+</code></pre>
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/13/进程优雅重启Graceful-Restart/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -993,7 +1160,7 @@ if __name__==&quot;__main__&quot;:
             
               <a href="/archives">
             
-                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-count">4</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
