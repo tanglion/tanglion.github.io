@@ -308,57 +308,14 @@
 
       
         
-          
-            <p>1、安装脚本</p>
-<pre><code>#!/usr/bin/env bash
-# Upgrade nmap
-
-# Check if user is root
-if [ $(id -u) != &quot;0&quot; ]; then
-    echo &quot;Error: You must be root to run this script&quot;
-    exit 1
-fi
-
-cur_dir=$(pwd)
-Nmap_Install()
-{
-    wget -c https://nmap.org/dist/nmap-7.60.tar.bz2
-    if [ -f &quot;./nmap-7.40.tar.bz2&quot; ]; then
-        bzip2 -cd nmap-7.40.tar.bz2 | tar xvf -
-        cd nmap-7.40
-        ./configure
-        make &amp;&amp; make install
-    fi
-}
-nmap --version
-if [ $? == 0 ]; then
-
-    version = `nmap --version` | awk &apos;{print $3}&apos;
-    if [ $version == &quot;7.60&quot; ]; then
-       echo &quot;Current nmap version is 7.40&quot;
-       exit 1
-    else
-       yum -y remove nmap
-       if [ $? == 0 ]; then
-           Nmap_Install
-       fi
-    fi
-else
-    Nmap_Install
-fi
-</code></pre><p>2、安装nmap 过程中可能会出错 g++: command not found<br>  原因：G++没有装或却没有更新<br>  运行如下命令：</p>
-<pre><code>centos： 
-yum -y update gcc 
-yum -y install gcc+ gcc-c++
-
-ubuntu： 
-apt-get update gcc 
-apt-get install g++
-</code></pre><p>3、运行nmap 出现如下错误<br>  nmap: error while loading shared libraries: libssl.so.1.1: cannot open shared object file: No such file or directory<br>  这是由于openssl库的位置不正确造成的。<br>  解决方法：<br>  在root用户下执行：</p>
-<pre><code>ln -s /usr/local/lib64/libssl.so.1.1 /usr/lib64/libssl.so.1.1
-ln -s /usr/local/lib64/libcrypto.so.1.1 /usr/lib64/libcrypto.so.1.1
-</code></pre>
-          
+          本文介绍了如何在linux系统上安装或更新nmap,并对出现的一些报错如何解决
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/09/19/centos安装-更新nmap/">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -475,227 +432,14 @@ ln -s /usr/local/lib64/libcrypto.so.1.1 /usr/lib64/libcrypto.so.1.1
 
       
         
-          
-            <p>话不多说，直接上代码</p>
-<p>1、版本检查和进程自身重启间的调度采用 signal chan</p>
-<pre><code>package main
-
-import (
-    &quot;GoRadar/core&quot;
-    &quot;GoRadar/lib&quot;
-    &quot;fmt&quot;
-    &quot;os/exec&quot;
-    &quot;github.com/benmanns/goworker&quot;
-    &quot;os&quot;
-    &quot;path/filepath&quot;
-    &quot;github.com/levigross/grequests&quot;
-    &quot;log&quot;
-    &quot;runtime&quot;
-    &quot;net/http&quot;
-    &quot;io&quot;
-    &quot;time&quot;
-)
-
-// 扫描
-func ScanActivityTask(queue string, args ...interface{}) error {
-    fmt.Println(&quot;调用队列:&quot; + queue)
-    ip_range := args[0].(string)
-    is_limit_scan_rate := args[1].(bool)
-    sa := core.NewScanActivity()
-    sa.Scanner(ip_range,is_limit_scan_rate)
-    return nil
-}
-func ScanPortTask(queue string, args ...interface{}) error {
-    fmt.Println(&quot;调用队列:&quot; + queue)
-    ip_range := args[0].(string)
-    scan_mode := args[1].(string)
-    is_limit_scan_rate := args[2].(bool)
-    sa := core.NewScanPort()
-    sa.Scan(ip_range,scan_mode,is_limit_scan_rate)
-    return nil
-}
-
-var (
-    version = &quot;1.0.1&quot;
-    download_url = &quot;&quot;
-)
-
-func Version_validate(c chan string) (bool){
-    resp, err := grequests.Get(&quot;http://192.168.0.7/version.txt&quot;, nil)
-    // You can modify the request by passing an optional RequestOptions struct
-    if err != nil {
-        fmt.Println(&quot;Validate version error: Unable to make request &quot;)
-        return false
-    }else {
-        new_version := resp.String()[0:5]
-        fmt.Println(&quot;new_version:&quot;+ new_version)
-        fmt.Println(&quot;version:&quot;+ version)
-        if version &lt; new_version {
-            os_name := runtime.GOOS
-            if os_name == &quot;linux&quot; {
-                download_url = &quot;http://192.168.0.7/linux/&quot; + new_version
-            } else if os_name == &quot;windows&quot; {
-                download_url = &quot;http://192.168.0.7/windows/&quot; + new_version
-            }
-            download,_ := Download_new_agent(download_url,os_name)
-            if download == true {
-                c &lt;- &quot;new&quot;
-                fmt.Println(&quot;New agent version found !&quot;)
-                return true
-            }else{
-                c &lt;- &quot;old&quot;
-                return false
-            }
-        }else{
-            return false
-        }
-    }
-}
-
-func Download_new_agent(url string,os_name string) (bool,error){
-    res, err := http.Get(url)
-    if err != nil {
-        return false,err
-    }
-    var file_name string
-    if os_name == &quot;windows&quot;{
-        file_name = &quot;Agent.exe&quot;
-    }else if os_name == &quot;linux&quot;{
-        file_name = &quot;Agent&quot;
-    }else{
-        file_name = &quot;Agent&quot;
-    }
-    cmd := exec.Command(&quot;rm&quot;,&quot;-rf&quot;,file_name)
-    cmd.Run()
-    f, err := os.Create(file_name)
-    if err != nil {
-        return false,err
-    }
-    _, er := io.Copy(f, res.Body)
-    if er != nil {
-        return false,er
-    }
-    if os_name == &quot;linux&quot;{
-        cmdd := exec.Command(&quot;chmod&quot;,&quot;+x&quot;,file_name)
-        cmdd.Run()
-    }
-    res.Body.Close()
-    f.Close()
-    return true,er
-
-}
-
-func Restart_process(){
-    filePath, _ := filepath.Abs(os.Args[0])
-    cmd := exec.Command(filePath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-    err := cmd.Start()
-    if err != nil {
-        log.Fatalf(&quot;GracefulRestart: Failed to launch, error: %v&quot;, err)
-    }
-
-}
-
-
-func init() {
-
-    cfg := lib.NewConfigUtil(&quot;&quot;)
-    redis_host, _ := cfg.GetString(&quot;redis_default&quot;, &quot;host&quot;)
-    redis_port, _ := cfg.GetString(&quot;redis_default&quot;, &quot;port&quot;)
-    redis_pass, _ := cfg.GetString(&quot;redis_default&quot;, &quot;pass&quot;)
-    redis_db, _ := cfg.GetString(&quot;redis_default&quot;, &quot;db&quot;)
-    var dsn_addr string
-    if redis_pass != &quot;&quot; {
-        dsn_addr = fmt.Sprintf(&quot;redis://:%s@%s:%s/%s&quot;, redis_pass, redis_host, redis_port, redis_db)
-    } else {
-        dsn_addr = fmt.Sprintf(&quot;redis://%s:%s/%s&quot;, redis_host, redis_port, redis_db)
-    }
-
-    settings := goworker.WorkerSettings{
-        URI:            dsn_addr,
-        Connections:    100,
-        Queues:         []string{&quot;ScanActivityQueue&quot;,&quot;ScanPortQuene&quot;},
-        UseNumber:      true,
-        ExitOnComplete: false,
-        Concurrency:    50,
-        Namespace:      &quot;goradar:&quot;,
-        Interval:       5.0,
-    }
-
-    goworker.SetSettings(settings)
-    //read scan option
-    activeswitch, _ := cfg.GetString(&quot;agent_default&quot;,&quot;scanactivity&quot;)
-    portswitch, _ := cfg.GetString(&quot;agent_default&quot;,&quot;scanport&quot;)
-    if activeswitch == &quot;yes&quot; {
-        goworker.Register(&quot;ScanActivityTask&quot;, ScanActivityTask)
-        fmt.Println(&quot;Start active scan !&quot;)
-    }else if activeswitch == &quot;no&quot;{
-        fmt.Println(&quot;Doesn&apos;t start active scan !&quot;)
-    }else{
-        fmt.Println(&quot;Error: config anget-&gt;scanactivity param error, only &apos;yes&apos; or &apos;no&apos; allowed&quot;)
-    }
-    if portswitch == &quot;yes&quot; {
-        goworker.Register(&quot;ScanPortTask&quot;, ScanPortTask)
-        fmt.Println(&quot;Start ports scan !&quot;)
-    }else if portswitch == &quot;no&quot;{
-        fmt.Println(&quot;Doesn&apos;t start ports scan !&quot;)
-    }else{
-        fmt.Println(&quot;Error: Config anget-&gt;scanport param error,only &apos;yes&apos; or &apos;no&apos; allowed&quot;)
-    }
-}
-
-func main() {
-
-    // 加入守护进程机制
-
-    if os.Getppid() != 1 {
-        //判断当其是否是子进程，当父进程return之后，子进程会被 系统1 号进程接管
-        filePath, _ := filepath.Abs(os.Args[0])
-        //将命令行参数中执行文件路径转换成可用路径
-        cmd := exec.Command(filePath)
-        //将其他命令传入生成出的进程
-        cmd.Stdin = os.Stdin
-        //给新进程设置文件描述符，可以重定向到文件中
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
-        //开始执行新进程，不等待新进程退出
-        cmd.Start()
-        return
-    }
-
-
-    signals := make(chan string)
-    go func(){
-        for{
-            Version_validate(signals)
-            time.Sleep(10 * time.Minute)
-        }
-    }()
-
-    go func() {
-        for{
-            if err := goworker.Work(); err != nil {
-                fmt.Println(&quot;Error:&quot;, err)
-            }
-        }
-    }()
-
-    for{
-        select {
-        case signal := &lt;-signals:
-            if signal == &quot;new&quot; {
-                Restart_process()
-                return
-            }
-        case &lt;-time.After(time.Second * 10):
-            fmt.Println(&quot;timeout, check again...&quot;)
-            continue
-        }
-    }
-}
-</code></pre>
-          
+          本文介绍了如何在go语言进程中实现自身的重启，主要用于进程自身的更新。
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/09/13/进程优雅重启Graceful-Restart/">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -812,110 +556,14 @@ func main() {
 
       
         
-          
-            <p>1、golang 读取kafka 如下库</p>
-<pre><code>import &quot;github.com/Shopify/sarama&quot;
-</code></pre><p> 但此库不支持balanced 读取模式</p>
-<p>package sarama<br>import “github.com/Shopify/sarama”</p>
-<p>Package sarama is a pure Go client library for dealing with Apache Kafka (versions 0.8 and later). It includes a high-level API for easily producing and consuming messages, and a low-level API for controlling bytes on the wire when the high-level API is insufficient. Usage examples for the high-level APIs are provided inline with their full documentation.</p>
-<p>To produce messages, use either the AsyncProducer or the SyncProducer. The AsyncProducer accepts messages on a channel and produces them asynchronously in the background as efficiently as possible; it is preferred in most cases. The SyncProducer provides a method which will block until Kafka acknowledges the message as produced. This can be useful but comes with two caveats: it will generally be less efficient, and the actual durability guarantees depend on the configured value of <code>Producer.RequiredAcks</code>. There are configurations where a message acknowledged by the SyncProducer can still sometimes be lost.</p>
-<p>To consume messages, use the Consumer. Note that Sarama’s Consumer implementation does not currently support automatic consumer-group rebalancing and offset tracking. <strong>For Zookeeper-based tracking (Kafka 0.8.2 and earlier), the <a href="https://github.com/wvanbergen/kafka" target="_blank" rel="external">https://github.com/wvanbergen/kafka</a> library</strong> builds on Sarama to add this support. For Kafka-based tracking (Kafka 0.9 and later), the <a href="https://github.com/bsm/sarama-cluster" target="_blank" rel="external">https://github.com/bsm/sarama-cluster</a> library builds on Sarama to add this support.</p>
-<pre><code>package main
-
-import (
-    &quot;flag&quot;
-    &quot;log&quot;
-    &quot;os&quot;
-    &quot;os/signal&quot;
-    &quot;strings&quot;
-    &quot;time&quot;
-
-    &quot;github.com/Shopify/sarama&quot;
-    &quot;github.com/wvanbergen/kafka/consumergroup&quot;
-    &quot;github.com/wvanbergen/kazoo-go&quot;
-)
-
-const (
-    DefaultKafkaTopics   = &quot;test_topic&quot;
-    DefaultConsumerGroup = &quot;consumer_example.go&quot;
-)
-
-var (
-    consumerGroup  = flag.String(&quot;group&quot;, DefaultConsumerGroup, &quot;The name of the consumer group, used for coordination and load balancing&quot;)
-    kafkaTopicsCSV = flag.String(&quot;topics&quot;, DefaultKafkaTopics, &quot;The comma-separated list of topics to consume&quot;)
-    zookeeper      = flag.String(&quot;zookeeper&quot;, &quot;&quot;, &quot;A comma-separated Zookeeper connection string (e.g. `zookeeper1.local:2181,zookeeper2.local:2181,zookeeper3.local:2181`)&quot;)
-
-    zookeeperNodes []string
-)
-
-func init() {
-    sarama.Logger = log.New(os.Stdout, &quot;[Sarama] &quot;, log.LstdFlags)
-}
-
-func main() {
-    flag.Parse()
-
-    if *zookeeper == &quot;&quot; {
-        flag.PrintDefaults()
-        os.Exit(1)
-    }
-
-    config := consumergroup.NewConfig()
-    config.Offsets.Initial = sarama.OffsetNewest
-    config.Offsets.ProcessingTimeout = 10 * time.Second
-
-    zookeeperNodes, config.Zookeeper.Chroot = kazoo.ParseConnectionString(*zookeeper)
-
-    kafkaTopics := strings.Split(*kafkaTopicsCSV, &quot;,&quot;)
-
-    consumer, consumerErr := consumergroup.JoinConsumerGroup(*consumerGroup, kafkaTopics, zookeeperNodes, config)
-    if consumerErr != nil {
-        log.Fatalln(consumerErr)
-    }
-
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func() {
-        &lt;-c
-        if err := consumer.Close(); err != nil {
-            sarama.Logger.Println(&quot;Error closing the consumer&quot;, err)
-        }
-    }()
-
-    go func() {
-        for err := range consumer.Errors() {
-            log.Println(err)
-        }
-    }()
-
-    eventCount := 0
-    offsets := make(map[string]map[int32]int64)
-
-    for message := range consumer.Messages() {
-        if offsets[message.Topic] == nil {
-            offsets[message.Topic] = make(map[int32]int64)
-        }
-
-        eventCount += 1
-        if offsets[message.Topic][message.Partition] != 0 &amp;&amp; offsets[message.Topic][message.Partition] != message.Offset-1 {
-            log.Printf(&quot;Unexpected offset on %s:%d. Expected %d, found %d, diff %d.\n&quot;, message.Topic, message.Partition, offsets[message.Topic][message.Partition]+1, message.Offset, message.Offset-offsets[message.Topic][message.Partition]+1)
-        }
-
-        // Simulate processing time
-        time.Sleep(10 * time.Millisecond)
-
-        offsets[message.Topic][message.Partition] = message.Offset
-        consumer.CommitUpto(message)
-    }
-
-    log.Printf(&quot;Processed %d events.&quot;, eventCount)
-    log.Printf(&quot;%+v&quot;, offsets)
-}
-</code></pre><p>2、若要使用balance读取模式</p>
-<pre><code>import &quot;github.com/wvanbergen/kafka&quot;
-</code></pre><p>关于simple_consumer 和 balanced_consumer 的区别详见前文</p>
-
-          
+          本文主要介绍了如何在golang中，调用相关的package,进行kafka的读取
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/09/08/golang读取kafka/">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1032,52 +680,14 @@ func main() {
 
       
         
-          
-            <h2 id="python-嗅探网卡HTTP流量并存储到Kafka-转自：路哥"><a href="#python-嗅探网卡HTTP流量并存储到Kafka-转自：路哥" class="headerlink" title="python: 嗅探网卡HTTP流量并存储到Kafka 转自：路哥"></a>python: 嗅探网卡HTTP流量并存储到Kafka <strong>转自：路哥</strong></h2><p>1、读取网卡http数据，插入kafka</p>
-<pre><code>from pykafka import KafkaClient
-from scapy.all import *
-import time
-import logging
-
-logging.getLogger(&quot;pykafka&quot;).addHandler(logging.StreamHandler())
-logging.getLogger(&quot;pykafka&quot;).setLevel(logging.DEBUG)
-
-client = KafkaClient(zookeeper_hosts =&quot;172.20.222.96:2181,172.20.222.97:2181&quot;)
-topic = client.topics[&apos;request_message&apos;]
-producers = topic.get_sync_producer()
-
-def callback(dpkt):
-    for p in dpkt:
-    for f in p.payload.payload.payload.fields_desc:
-        fvalue = p.payload.payload.getfieldval(f.name)
-        reprval = f.i2repr(p.payload.payload, fvalue)
-        if &apos;HTTP&apos; in reprval and &apos;GET&apos; in reprval:
-        reprval = reprval[1:]
-        request_text = reprval[:-1]
-                producers.produce(str(request_text))
-
-if __name__==&quot;__main__&quot;:  
-    sniff(iface = &quot;enp2s0f1&quot;, filter=&quot;tcp port 80 or tcp port 443&quot;, prn=callback)
-</code></pre><p>2、顺便附上kafka消费代码</p>
-<pre><code>from pykafka import KafkaClient
-from scapy.all import *
-import time
-import logging
-
-logging.getLogger(&quot;pykafka&quot;).addHandler(logging.StreamHandler())
-logging.getLogger(&quot;pykafka&quot;).setLevel(logging.DEBUG)
-
-client = KafkaClient(zookeeper_hosts =&quot;172.20.222.96:2181,172.20.222.97:2181&quot;)
-topic = client.topics[&apos;request_message&apos;]
-if __name__==&quot;__main__&quot;:  
-    consumer = topic.get_balanced_consumer(consumer_group=&apos;net_url&apos;,auto_commit_enable=True) 
-    for message in consumer:
-        print message.value
-</code></pre><p>3、 关于 simple_consumer和balanced_consumer的区别：</p>
-<p>   simple_consumer：简单读取模式，不记录offset值，每次执行都是从消息队列的起始位置读取</p>
-<p>   balanced_consumer：参数group 表示读取者所属组，每次读取后会记录当前读取位置，下次读取时从该位置读取，这样保证了，多个同组的读取者，每次读取的数据不重复</p>
-
-          
+          本文主要介绍了如何通过脚本嗅探网卡流量并利用kafka进行数据的读取
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/09/08/python操作kafka/">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1173,7 +783,7 @@ if __name__==&quot;__main__&quot;:
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-count">4</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
